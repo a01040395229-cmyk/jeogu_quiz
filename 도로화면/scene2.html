@@ -288,14 +288,14 @@
             height: 140px;
             animation: flyAcross 6s infinite linear;
             z-index: 2;
-            will-change: right;
+            will-change: transform;
             transform: translateZ(0);
             backface-visibility: hidden;
         }
 
         @keyframes flyAcross {
-            0% { right: -30%; }
-            100% { right: 130%; }
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-1728px, 0, 0); }
         }
 
         .airplane {
@@ -323,16 +323,16 @@
             background-position: center;
             opacity: 0;
             animation: dropAnimation 6s infinite;
-            will-change: top, transform, opacity;
+            will-change: transform, opacity;
             transform: translateZ(0);
             backface-visibility: hidden;
         }
 
         @keyframes dropAnimation {
-            0%, 55% { top: 60%; opacity: 0; transform: rotate(0deg); }
-            55.1% { opacity: 1; top: 60%; transform: rotate(0deg); animation-timing-function: ease-in; }
-            75% { top: 500%; opacity: 1; transform: rotate(-360deg); }
-            75.1%, 100% { top: 500%; opacity: 0; }
+            0%, 55% { opacity: 0; transform: translate3d(0, 0, 0) rotate(0deg); }
+            55.1% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); animation-timing-function: ease-in; }
+            75% { opacity: 1; transform: translate3d(0, 616px, 0) rotate(-360deg); }
+            75.1%, 100% { opacity: 0; transform: translate3d(0, 616px, 0) rotate(-360deg); }
         }
 
         .pop-icon-container {
@@ -356,14 +356,14 @@
             background-repeat: no-repeat;
             background-position: center;
             opacity: 0;
-            will-change: left, top, transform, opacity;
+            will-change: transform, opacity;
             transform: translateZ(0);
             backface-visibility: hidden;
         }
 
         .pop-icon5 {
             position: absolute;
-            top: 582px; /* 60% -> 582px */
+            top: 727px;
             right: -170px;
             width: 157px; /* bg-icon5 원본 사이즈 */
             height: 157px;
@@ -372,7 +372,7 @@
             background-repeat: no-repeat;
             background-position: center;
             opacity: 0;
-            will-change: right, top, transform, opacity;
+            will-change: transform, opacity;
             transform: translateZ(0);
             backface-visibility: hidden;
         }
@@ -386,19 +386,19 @@
         }
 
         @keyframes popAndDropLeft {
-            0%, 5% { left: -150px; top: 582px; transform: rotate(-90deg); opacity: 0; }
-            6% { opacity: 1; left: -100px; top: 582px; transform: rotate(-90deg); animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1); }
-            20% { left: 15%; top: 485px; transform: rotate(45deg); animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
-            55% { left: 35%; top: 1455px; transform: rotate(270deg); opacity: 1; }
-            56%, 100% { left: 35%; top: 1455px; opacity: 0; }
+            0%, 5% { transform: translate3d(0, 0, 0) rotate(-90deg); opacity: 0; }
+            6% { opacity: 1; transform: translate3d(50px, 0, 0) rotate(-90deg); animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1); }
+            20% { transform: translate3d(312px, -97px, 0) rotate(45deg); animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
+            55% { transform: translate3d(528px, 873px, 0) rotate(270deg); opacity: 1; }
+            56%, 100% { transform: translate3d(528px, 873px, 0) rotate(270deg); opacity: 0; }
         }
 
         @keyframes popAndDropRight {
-            0%, 5% { right: -170px; top: 727px; transform: rotate(90deg); opacity: 0; }
-            6% { opacity: 1; right: -100px; top: 727px; transform: rotate(90deg); animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1); }
-            20% { right: 15%; top: 436px; transform: rotate(-45deg); animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
-            45% { right: 25%; top: 1455px; transform: rotate(-270deg); opacity: 1; }
-            46%, 100% { right: 25%; top: 1455px; opacity: 0; }
+            0%, 5% { transform: translate3d(0, 0, 0) rotate(90deg); opacity: 0; }
+            6% { opacity: 1; transform: translate3d(-70px, 0, 0) rotate(90deg); animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1); }
+            20% { transform: translate3d(-332px, -291px, 0) rotate(-45deg); animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
+            45% { transform: translate3d(-440px, 728px, 0) rotate(-270deg); opacity: 1; }
+            46%, 100% { transform: translate3d(-440px, 728px, 0) rotate(-270deg); opacity: 0; }
         }
 
         .bt-start {
