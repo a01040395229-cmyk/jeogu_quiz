@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>저구와 함께하는 퀴즈타임</title>
+    <link rel="preload" href="./도로화면/asset/background 1.png" as="image" type="image/png">
+    <link rel="preload" href="./도로화면/asset/background-road.png" as="image" type="image/png">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #000;
+        }
+        iframe {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <audio id="bgm-player" src="./funk-breakbeat.m4a" loop></audio>
+    <iframe id="game-frame" src="./도로화면/scene1.html"></iframe>
+
+    <script>
+        const bgmPlayer = document.getElementById('bgm-player');
+        bgmPlayer.volume = 0.15; // Set volume as requested
+        const gameFrame = document.getElementById('game-frame');
+
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            if (!data) return;
+
+            if (data.type === 'interaction') {
+                if (bgmPlayer.paused) {
+                    bgmPlayer.play().catch(e => console.log('BGM Autoplay blocked:', e));
+                }
+            } else if (data.type === 'navigate') {
+                gameFrame.src = data.url;
+            }
+        });
+    </script>
+</body>
+</html>
