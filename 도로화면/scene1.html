@@ -254,8 +254,8 @@
         }
 
         .cloud1 {
-            width: 300px;
-            height: 150px;
+            width: 3000px;
+            height: 1500px;
             background-image: url('asset/cloud1.svg');
             animation: moveCloudLeftGPU 8s infinite ease-in;
         }
@@ -265,8 +265,8 @@
         }
 
         .cloud2 {
-            width: 250px;
-            height: 125px;
+            width: 2500px;
+            height: 1250px;
             background-image: url('asset/cloud2.svg');
             animation: moveCloudRightGPU 7s infinite ease-in;
             animation-delay: -3.5s;
@@ -279,17 +279,17 @@
 
         /* 공통: GPU translate3d를 사용하여 60fps 하드웨어 가속 */
         @keyframes moveCloudLeftGPU {
-            0% { transform: translate3d(324px, 970px, 0) translate(-50%, -50%) scale(1.5); opacity: 0; }
+            0% { transform: translate3d(324px, 970px, 0) translate(-50%, -50%) scale(0.15); opacity: 0; }
             10% { opacity: 1; }
             85% { opacity: 1; }
-            100% { transform: translate3d(-324px, 339px, 0) translate(-50%, -50%) scale(12); opacity: 0; }
+            100% { transform: translate3d(-324px, 339px, 0) translate(-50%, -50%) scale(1.2); opacity: 0; }
         }
 
         @keyframes moveCloudRightGPU {
-            0% { transform: translate3d(756px, 970px, 0) translate(-50%, -50%) scale(1.2); opacity: 0; }
+            0% { transform: translate3d(756px, 970px, 0) translate(-50%, -50%) scale(0.12); opacity: 0; }
             10% { opacity: 1; }
             85% { opacity: 1; }
-            100% { transform: translate3d(1404px, 436px, 0) translate(-50%, -50%) scale(14); opacity: 0; }
+            100% { transform: translate3d(1404px, 436px, 0) translate(-50%, -50%) scale(1.4); opacity: 0; }
         }
 
         .bt-start {
@@ -505,7 +505,7 @@
             transform: translate(-50%, -50%);
             width: 2300px;
             height: 2300px;
-            z-index: 48; /* 저구 앞으로 오도록 z-index 수정 */
+            z-index: 44; /* 깜빡임 방지를 위해 저구 뒤로 오도록 z-index 수정 */
             display: none;
             pointer-events: none;
         }
@@ -548,7 +548,8 @@
             height: calc(100% + 4px);
             background-color: #35D047;
             z-index: 50;
-            display: none;
+            display: flex;
+            pointer-events: none;
             flex-direction: column;
             align-items: center;
             justify-content: center; /* 화면 중앙 정렬 */
@@ -557,8 +558,8 @@
         }
 
         .quiz-screen.active {
-            display: flex;
             opacity: 1;
+            pointer-events: auto;
         }
 
         .quiz-eyes {
@@ -1395,7 +1396,7 @@
 
                         // 2. 줌인이 끝날 무렵(0.6초) 윙크 표정(big-jeogu-2)으로 변경
                         setTimeout(() => {
-                            bigJeogu1.style.display = 'none';
+                            bigJeogu1.style.opacity = '0';
                             bigJeogu2.style.opacity = '1';
                         }, 600);
 

@@ -57,7 +57,12 @@
                 ensureBgmPlaying();
             } else if (data.type === 'navigate') {
                 try {
-                    gameFrame.contentWindow.location.replace(data.url);
+                    const targetAbsolute = new URL(data.url, window.location.href).href;
+                    if (gameFrame.contentWindow && gameFrame.contentWindow.location.href === targetAbsolute) {
+                        gameFrame.contentWindow.location.reload();
+                    } else {
+                        gameFrame.src = data.url;
+                    }
                 } catch (e) {
                     gameFrame.src = data.url;
                 }

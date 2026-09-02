@@ -39,11 +39,12 @@
         const path = window.location.pathname;
         const isScene1 = path.includes('scene1.html');
 
-        if (window.parent && window.parent !== window) {
-            window.parent.postMessage({ type: 'navigate', url: encodeURI('./도로화면/scene1.html') }, '*');
+        if (isScene1) {
+            // 이미 scene1에 있는 경우 (시작 버튼 클릭 후 유휴 방치 등) 직접 리로드하여 초기 첫 화면으로 복원
+            window.location.reload();
         } else {
-            if (isScene1) {
-                window.location.reload();
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'navigate', url: encodeURI('./도로화면/scene1.html') }, '*');
             } else {
                 window.location.href = '../도로화면/scene1.html';
             }
@@ -178,6 +179,7 @@
         // 터치 이벤트 기본 동작 대응 (클릭 지연이나 더블 탭 확대 방지용)
         [backBtn, btnClose, btnMain].forEach(el => {
             el.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
                 // 패시브 옵션을 통해 스크롤 등 기본 동작은 허용하되, 버튼 눌림 효과(액티브)를 위해 추가
             }, { passive: true });
         });
