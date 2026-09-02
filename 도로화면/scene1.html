@@ -1200,7 +1200,7 @@
         
         // 사이렌 볼륨 조절을 위한 GainNode 생성
         const sirenGain = audioCtx.createGain();
-        sirenGain.gain.value = 0.4; // 스탠바이미 등 외부 스피커에서 잘 들리도록 기존 0.05에서 0.4로 상향
+        sirenGain.gain.value = 0.2; // 스탠바이미 등 외부 스피커에서 잘 들리도록 기존 0.05에서 0.4로 상향
         sirenGain.connect(audioCtx.destination);
 
         // Base64 오디오 문자열을 ArrayBuffer로 변환

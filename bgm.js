@@ -16,7 +16,14 @@
         standaloneAudio.src = new URL('funk-breakbeat.m4a', scriptUrl).href;
         standaloneAudio.loop = true;
         standaloneAudio.volume = 0.15;
-        document.body.appendChild(standaloneAudio);
+        const appendAudio = () => {
+            (document.body || document.documentElement).appendChild(standaloneAudio);
+        };
+        if (document.body) {
+            appendAudio();
+        } else {
+            document.addEventListener('DOMContentLoaded', appendAudio);
+        }
     }
 
     const signalInteraction = () => {

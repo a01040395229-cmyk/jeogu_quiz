@@ -56,7 +56,11 @@
                 isBgmUnlocked = true;
                 ensureBgmPlaying();
             } else if (data.type === 'navigate') {
-                gameFrame.src = data.url;
+                try {
+                    gameFrame.contentWindow.location.replace(data.url);
+                } catch (e) {
+                    gameFrame.src = data.url;
+                }
                 ensureBgmPlaying();
             }
         });

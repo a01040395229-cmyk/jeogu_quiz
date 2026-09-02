@@ -1,4 +1,77 @@
 (function() {
+    // 0. 20초 무입력(유휴 상태) 감지 및 첫 화면 복귀 로직
+    const IDLE_TIMEOUT_MS = 20000; // 20초
+    let lastActivityTime = Date.now();
+    let isReturningToMain = false;
+
+    const onUserActivity = () => {
+        lastActivityTime = Date.now();
+    };
+
+    const ACTIVITY_EVENTS = [
+        'touchstart',
+        'touchmove',
+        'touchend',
+        'touchcancel',
+        'pointerdown',
+        'pointermove',
+        'pointerup',
+        'pointercancel',
+        'mousedown',
+        'mousemove',
+        'mouseup',
+        'keydown',
+        'click',
+        'scroll'
+    ];
+
+    ACTIVITY_EVENTS.forEach(event => {
+        window.addEventListener(event, onUserActivity, { passive: true, capture: true });
+    });
+
+    const returnToMainScreen = () => {
+        if (isReturningToMain) return;
+        isReturningToMain = true;
+
+        sessionStorage.clear();
+        localStorage.clear();
+
+        const path = window.location.pathname;
+        const isScene1 = path.includes('scene1.html');
+
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'navigate', url: encodeURI('./도로화면/scene1.html') }, '*');
+        } else {
+            if (isScene1) {
+                window.location.reload();
+            } else {
+                window.location.href = '../도로화면/scene1.html';
+            }
+        }
+    };
+
+    const checkIdle = () => {
+        if (isReturningToMain) return;
+
+        const elapsed = Date.now() - lastActivityTime;
+        if (elapsed >= IDLE_TIMEOUT_MS) {
+            const path = window.location.pathname;
+            const isScene1 = path.includes('scene1.html');
+            if (isScene1) {
+                const btnStart = document.getElementById('btnStart');
+                // 시작 버튼이 여전히 표시 중인 초기 첫 화면 대기 상태라면 리로드하지 않고 타이머 유지
+                if (btnStart && window.getComputedStyle(btnStart).display !== 'none') {
+                    lastActivityTime = Date.now();
+                    return;
+                }
+            }
+
+            returnToMainScreen();
+        }
+    };
+
+    setInterval(checkIdle, 1000);
+
     // 1. CSS 인젝션
     const style = document.createElement('style');
     style.innerHTML = `
@@ -97,10 +170,8 @@
         btnClose.addEventListener('click', closePopup);
 
         const goMain = (e) => {
-            e.stopPropagation();
-            sessionStorage.clear();
-            localStorage.clear();
-            window.parent.postMessage({ type: 'navigate', url: encodeURI('./도로화면/scene1.html') }, '*');
+            if (e && e.stopPropagation) e.stopPropagation();
+            returnToMainScreen();
         };
         btnMain.addEventListener('click', goMain);
         
