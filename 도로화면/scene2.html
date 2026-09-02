@@ -149,18 +149,27 @@
             will-change: transform;
         }
 
-        .road-container {
+        .road-wrapper {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
             bottom: 0;
             width: 200px;
+            height: 793px; /* 943px - 150px (clip-path 대신 GPU 부하 없는 overflow 마스킹) */
+            overflow: hidden;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .road-container {
+            position: absolute;
+            left: 0;
+            top: -150px;
+            width: 100%;
             height: 943px;
             perspective: 250px; /* 3D 공간 깊이감 부여 */
             perspective-origin: 50% 0%; /* 소실점을 맨 위쪽(저구 밑)으로 설정 */
-            z-index: 1;
-            overflow: hidden; /* 위로 벗어나지 않게 */
-            clip-path: inset(150px 0 0 0); /* 도로 지평선 위(하늘 영역)로 중앙선이 침범하지 않도록 클리핑 */
+            overflow: hidden;
             contain: paint;
         }
 

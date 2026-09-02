@@ -224,6 +224,8 @@ html, body {
   overflow: visible;
   z-index: 2;
   pointer-events: none;
+  contain: strict;
+  transform: translateZ(0);
 }
 
 .clouds-loop-track {
@@ -1039,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const confettiCtx = confettiCanvas ? confettiCanvas.getContext('2d', { alpha: true }) : null;
   let confettiParticles = [];
   let confettiAnimId = null;
-  const CONFETTI_PARTICLE_COUNT = 120;
+  const CONFETTI_PARTICLE_COUNT = 80;
   const CONFETTI_MAX_DURATION_MS = 2500;
 
   const CONFETTI_COLORS = [

@@ -197,23 +197,29 @@
         // 초기 상태 설정
         updateVisibility();
 
-        // 상태 변화 감지 (style, class 변경)
+        // 상태 변화 감지 (style, class 변경) - rAF 스로틀링 적용으로 프레임 드랍 방지
+        let isObserverScheduled = false;
         const observer = new MutationObserver(() => {
-            updateVisibility();
+            if (isObserverScheduled) return;
+            isObserverScheduled = true;
+            requestAnimationFrame(() => {
+                isObserverScheduled = false;
+                updateVisibility();
 
-            const path = window.location.pathname;
-            if (path.includes('%ED%80%B4%EC%A6%882') || path.includes('퀴즈2')) {
-                const introScene = document.getElementById('intro-scene');
-                const quizScene = document.getElementById('quiz-scene');
-                
-                if (quizScene && quizScene.style.display === 'block' && backBtn.parentElement !== quizScene) {
-                    quizScene.appendChild(backBtn);
-                    quizScene.appendChild(popupOverlay);
-                } else if (introScene && introScene.style.display !== 'none' && backBtn.parentElement !== introScene) {
-                    introScene.appendChild(backBtn);
-                    introScene.appendChild(popupOverlay);
+                const path = window.location.pathname;
+                if (path.includes('%ED%80%B4%EC%A6%882') || path.includes('퀴즈2')) {
+                    const introScene = document.getElementById('intro-scene');
+                    const quizScene = document.getElementById('quiz-scene');
+                    
+                    if (quizScene && quizScene.style.display === 'block' && backBtn.parentElement !== quizScene) {
+                        quizScene.appendChild(backBtn);
+                        quizScene.appendChild(popupOverlay);
+                    } else if (introScene && introScene.style.display !== 'none' && backBtn.parentElement !== introScene) {
+                        introScene.appendChild(backBtn);
+                        introScene.appendChild(popupOverlay);
+                    }
                 }
-            }
+            });
         });
 
         // 감지할 대상 요소들
