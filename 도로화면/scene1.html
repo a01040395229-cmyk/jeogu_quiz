@@ -889,6 +889,43 @@
             });
         }
 
+        function prepareImage(image, timeoutMs = 2000) {
+            if (!image) return Promise.resolve();
+
+            return new Promise((resolve) => {
+                let settled = false;
+
+                const finish = () => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timeoutId);
+                    image.removeEventListener('load', handleLoad);
+                    image.removeEventListener('error', finish);
+                    resolve();
+                };
+
+                const decode = () => {
+                    if (typeof image.decode === 'function') {
+                        image.decode().then(finish, finish);
+                    } else {
+                        finish();
+                    }
+                };
+
+                const handleLoad = () => decode();
+                const timeoutId = setTimeout(finish, timeoutMs);
+
+                if (image.complete) {
+                    if (image.naturalWidth > 0) decode();
+                    else finish();
+                    return;
+                }
+
+                image.addEventListener('load', handleLoad, { once: true });
+                image.addEventListener('error', finish, { once: true });
+            });
+        }
+
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
@@ -912,6 +949,13 @@
         const quizScreen = document.getElementById('quizScreen');
         const bigJeogu1 = document.getElementById('bigJeogu1');
         const bigJeogu2 = document.getElementById('bigJeogu2');
+        const quizScreenImage = quizScreen.querySelector('img');
+        const finalTransitionAssetsReady = Promise.all([
+            bigJeogu1,
+            bigJeogu2,
+            quizScreenImage
+        ].map(image => prepareImage(image)));
+        let isFinalTransitionStarting = false;
         const roadContainer = document.querySelector('.road-container');
         const roadLineCss = document.querySelector('.road-line-css');
         const cloud1 = document.querySelector('.cloud1');
@@ -1369,8 +1413,11 @@
                             cloud2.classList.remove('fast');
                         }
                     } else if (currentPhraseIndex === phrases.length - 1) {
+                        if (isFinalTransitionStarting) return;
+                        isFinalTransitionStarting = true;
                         // 마지막 대화 후 클릭 시 전환 애니메이션 실행
                         currentPhraseIndex++; // 중복 실행 방지
+                        finalTransitionAssetsReady.then(() => {
                         
                         // 기존 UI 숨기기
                         signBubble.style.display = 'none';
@@ -1416,6 +1463,7 @@
                                 window.parent.postMessage({ type: 'navigate', url: encodeURI('./퀴즈1 전반부/index.html') }, '*');
                             }, 1500);
                         }, 2300);
+                        });
                     }
                 }
             }
