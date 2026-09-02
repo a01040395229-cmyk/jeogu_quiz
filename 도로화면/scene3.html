@@ -6,6 +6,9 @@
     <title>StanbyME</title>
     <link rel="preload" href="../fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="asset/background-road.png" as="image" type="image/png">
+    <link rel="preload" href="asset/alarm-1.svg" as="image">
+    <link rel="preload" href="asset/alarm-2.svg" as="image">
+    <link rel="preload" href="asset/rect-warning.svg" as="image">
     <style>
         @font-face {
             font-family: 'Pretendard';
@@ -434,17 +437,35 @@
             height: 358px;
             display: none;
             z-index: 12; /* 저구보다 위 */
-            background-image: url('asset/alarm-1.svg');
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            animation: toggleSiren 0.5s infinite steps(1); /* 0.5초마다 교체 */
+            pointer-events: none;
         }
 
-        @keyframes toggleSiren {
-            0% { background-image: url('asset/alarm-1.svg'); }
-            50% { background-image: url('asset/alarm-2.svg'); }
-            100% { background-image: url('asset/alarm-1.svg'); }
+        .siren .siren-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .siren .siren-1 {
+            animation: toggleSiren1 0.5s infinite steps(1);
+        }
+
+        .siren .siren-2 {
+            animation: toggleSiren2 0.5s infinite steps(1);
+        }
+
+        @keyframes toggleSiren1 {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        @keyframes toggleSiren2 {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
         }
 
 
@@ -632,7 +653,10 @@
             </div>
             
             <!-- 사이렌 알람 -->
-            <div class="siren" id="siren"></div>
+            <div class="siren" id="siren">
+                <img src="asset/alarm-1.svg" class="siren-img siren-1" alt="" decoding="async">
+                <img src="asset/alarm-2.svg" class="siren-img siren-2" alt="" decoding="async">
+            </div>
 
 
 
@@ -1014,6 +1038,7 @@
             element.innerHTML = "";
             currentFullHTML = htmlString;
             isTyping = true;
+            typingStartTime = Date.now();
             extensionImg.style.display = 'none';
             
             const steps = getTypingSteps(htmlString);
@@ -1052,6 +1077,7 @@
         let typingTimeout;
         let isTyping = false;
         let currentFullHTML = "";
+        let typingStartTime = 0;
 
 
 
@@ -1063,7 +1089,7 @@
         
         // 사이렌 볼륨 조절을 위한 GainNode 생성
         const sirenGain = audioCtx.createGain();
-        sirenGain.gain.value = 0.05; // 1.0이 기본값, 0.05로 볼륨을 훨씬 더 줄임
+        sirenGain.gain.value = 0.4; // 스탠바이미 등 외부 스피커에서 잘 들리도록 기존 0.05에서 0.4로 상향
         sirenGain.connect(audioCtx.destination);
 
         // Base64 오디오 문자열을 ArrayBuffer로 변환
@@ -1150,6 +1176,7 @@
         };
 
         let lastInteractionTime = 0;
+        let lastTouchTime = 0;
 
         // 화면 클릭(터치) 시 상태에 따라 화면 전환 및 문구 넘어가기
         const handleScreenClick = (e) => {
@@ -1172,7 +1199,11 @@
             // 3. 표지판이 화면에 표시된 상태일 때만 대화 진행
             if (signBubble.style.display === 'block') {
                 if (isTyping) {
-                    // 타이핑 도중 클릭 시 남은 글자 모두 즉시 표시
+                    // 타이핑이 시작된 직후(600ms 이내)에는 합성 클릭이나 이전 터치로 인한 즉시 스킵 방지
+                    if (now - typingStartTime < 600) {
+                        return;
+                    }
+                    // 사용자가 타이핑 도중 클릭/터치 시 남은 글자 모두 즉시 표시
                     clearTimeout(typingTimeout);
                     userNameDisplay.innerHTML = currentFullHTML;
                     isTyping = false;
@@ -1261,8 +1292,18 @@
             }
         };
 
-        window.addEventListener('click', handleScreenClick);
-        window.addEventListener('touchstart', handleScreenClick, { passive: true });
+        window.addEventListener('touchstart', (e) => {
+            lastTouchTime = Date.now();
+            handleScreenClick(e);
+        }, { passive: true });
+
+        window.addEventListener('click', (e) => {
+            // 터치 직후 브라우저에서 발생하는 가상(synthetic) 클릭 이벤트 무시
+            if (Date.now() - lastTouchTime < 800) {
+                return;
+            }
+            handleScreenClick(e);
+        });
 
         // 저구 눈동자가 커서를 따라다니게 하는 로직 (스마트 슬립 최적화: 유휴 시 CPU 0%)
         const pupils = document.querySelectorAll('.pupil');
