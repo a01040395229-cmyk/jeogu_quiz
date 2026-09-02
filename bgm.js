@@ -44,6 +44,16 @@
         // 이벤트 리스너를 제거하지 않고 유지하여 다음 터치 시 다시 재생되도록 함
     };
 
+    // 새 iframe 로드 시 부모 BGM이 멈춰있다면 즉시 재생 복구 시도
+    if (!isStandalone) {
+        try {
+            const bgmPlayer = window.parent.document.getElementById('bgm-player');
+            if (bgmPlayer && bgmPlayer.paused) {
+                bgmPlayer.play().catch(() => {});
+            }
+        } catch (e) {}
+    }
+
     document.addEventListener('touchstart', signalInteraction, { passive: true });
     document.addEventListener('click', signalInteraction, { passive: true });
 })();

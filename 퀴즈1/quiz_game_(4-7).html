@@ -7,6 +7,7 @@
   <link rel="preload" href="../fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin />
   <script src="../bgm.js"></script>
   <script src="../back_button.js"></script>
+  <script src="../quiz_sfx_b64.js"></script>
   <style>
 @font-face {
   font-family: 'Pretendard';
@@ -952,13 +953,10 @@ document.addEventListener('DOMContentLoaded', () => {
     imageCache[src] = img;
   });
 
-  // ── Web Audio API 최적화 (맥북/스탠바이미 전용 하이브리드 호환) ──
+  // ── Web Audio API 효과음 (Base64 인메모리 디코딩, BGM 간섭 원천 차단) ──
   const sfxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   let correctBuffer = null;
   let incorrectBuffer = null;
-
-  const fallbackCorrectAudio = new Audio('효과음/정답 효과음.mp3');
-  const fallbackIncorrectAudio = new Audio('효과음/오답 효과음 2.mp3');
 
   const unlockAudioContext = () => {
     if (sfxAudioCtx.state === 'suspended') {
@@ -968,6 +966,16 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('touchstart', unlockAudioContext, { passive: true });
   window.addEventListener('pointerdown', unlockAudioContext, { passive: true });
   window.addEventListener('click', unlockAudioContext, { passive: true });
+
+  function base64ToArrayBuffer(base64) {
+    const binaryString = window.atob(base64.split(',')[1]);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
 
   function decodeAudio(arrayBuffer) {
     return new Promise((resolve, reject) => {
@@ -986,18 +994,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function preloadSFX(url, callback) {
-    fetch(url)
-      .then(res => res.arrayBuffer())
-      .then(arrayBuffer => decodeAudio(arrayBuffer))
-      .then(buffer => callback(buffer))
-      .catch(err => console.log('SFX WebAudio Load fallback:', url, err));
+  if (typeof CORRECT_SFX_B64 !== 'undefined') {
+    decodeAudio(base64ToArrayBuffer(CORRECT_SFX_B64)).then(buf => { correctBuffer = buf; });
+  }
+  if (typeof INCORRECT_SFX_B64 !== 'undefined') {
+    decodeAudio(base64ToArrayBuffer(INCORRECT_SFX_B64)).then(buf => { incorrectBuffer = buf; });
   }
 
-  preloadSFX('효과음/정답 효과음.mp3', buf => { correctBuffer = buf; });
-  preloadSFX('효과음/오답 효과음 2.mp3', buf => { incorrectBuffer = buf; });
-
-  function playBufferSound(buffer, fallbackAudio) {
+  function playBufferSound(buffer) {
     if (sfxAudioCtx.state === 'suspended') {
       sfxAudioCtx.resume();
     }
@@ -1007,24 +1011,16 @@ document.addEventListener('DOMContentLoaded', () => {
         source.buffer = buffer;
         source.connect(sfxAudioCtx.destination);
         source.start(0);
-        return;
-      } catch (e) {}
-    }
-    if (fallbackAudio) {
-      try {
-        const clone = fallbackAudio.cloneNode();
-        clone.currentTime = 0;
-        clone.play().catch(() => {});
       } catch (e) {}
     }
   }
 
   function playCorrectSound() {
-    playBufferSound(correctBuffer, fallbackCorrectAudio);
+    playBufferSound(correctBuffer);
   }
 
   function playIncorrectSound() {
-    playBufferSound(incorrectBuffer, fallbackIncorrectAudio);
+    playBufferSound(incorrectBuffer);
   }
 
   function resizeGameContainer() {

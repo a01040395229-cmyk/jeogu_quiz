@@ -702,6 +702,7 @@
   </style>
   <script src="../bgm.js"></script>
   <script src="../back_button.js"></script>
+  <script src="../quiz_sfx_b64.js"></script>
 </head>
 <body>
   <!-- screen1.html 원본 구조 -->
@@ -1101,10 +1102,9 @@
               }
             }
         
-            /* ── 사운드 효과 (맥북/스탠바이미 하이브리드 호환) ── */
+            /* ── 사운드 효과 (Base64 인메모리 디코딩, BGM 간섭 원천 차단) ── */
             const sfxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             let correctSfxBuffer = null;
-            const fallbackCorrectAudio = new Audio('sound/correct_sfx.mp3');
 
             const unlockAudioCtx = () => {
               if (sfxAudioCtx.state === 'suspended') {
@@ -1114,6 +1114,16 @@
             window.addEventListener('touchstart', unlockAudioCtx, { passive: true });
             window.addEventListener('pointerdown', unlockAudioCtx, { passive: true });
             window.addEventListener('click', unlockAudioCtx, { passive: true });
+
+            function base64ToArrayBuffer(base64) {
+              const binaryString = window.atob(base64.split(',')[1]);
+              const len = binaryString.length;
+              const bytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              return bytes.buffer;
+            }
 
             function decodeAudio(arrayBuffer) {
               return new Promise((resolve, reject) => {
@@ -1132,11 +1142,9 @@
               });
             }
 
-            fetch('sound/correct_sfx.mp3')
-              .then(res => res.arrayBuffer())
-              .then(data => decodeAudio(data))
-              .then(buf => { correctSfxBuffer = buf; })
-              .catch(() => {});
+            if (typeof CORRECT_SFX_B64 !== 'undefined') {
+              decodeAudio(base64ToArrayBuffer(CORRECT_SFX_B64)).then(buf => { correctSfxBuffer = buf; });
+            }
 
             function playCorrect() {
               if (sfxAudioCtx.state === 'suspended') {
@@ -1148,14 +1156,8 @@
                   source.buffer = correctSfxBuffer;
                   source.connect(sfxAudioCtx.destination);
                   source.start(0);
-                  return;
                 } catch (e) {}
               }
-              try {
-                const clone = fallbackCorrectAudio.cloneNode();
-                clone.currentTime = 0;
-                clone.play().catch(() => {});
-              } catch (e) {}
             }
         
             function showPopup(id) {
