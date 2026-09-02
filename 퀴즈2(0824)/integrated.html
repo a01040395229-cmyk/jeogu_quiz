@@ -1006,7 +1006,7 @@
             setTimeout(tickSoldOut, 2000);
             /* 할인 타이머: 실제 경과 시간 기준 00:59:00 반복 카운트다운 */
             const TIMER_DURATION_MS = 59000;
-            const TIMER_TICK_MS = 50;
+            const TIMER_TICK_MS = 100;
             const elMin = document.getElementById('timer-min');
             const elSec = document.getElementById('timer-sec');
             const elCs = document.getElementById('timer-cs');
@@ -1043,10 +1043,19 @@
             }
         
             function startDiscountTimer() {
-              if (timerIntervalId !== null || timerWrap.classList.contains('solved')) return;
+              if (document.hidden || timerIntervalId !== null || timerWrap.classList.contains('solved')) return;
               timerCycleStartedAt = performance.now();
               renderDiscountTimer(TIMER_DURATION_MS);
               timerIntervalId = setInterval(tickDiscountTimer, TIMER_TICK_MS);
+            }
+
+            function handleTimerVisibilityChange() {
+              if (document.hidden) {
+                stopDiscountTimer();
+                return;
+              }
+
+              startDiscountTimer();
             }
         
             function resetDiscountTimer() {
@@ -1058,6 +1067,7 @@
             startDiscountTimer();
             window.addEventListener('pagehide', stopDiscountTimer);
             window.addEventListener('pageshow', startDiscountTimer);
+            document.addEventListener('visibilitychange', handleTimerVisibilityChange);
         
             /* ══ 퀴즈 인터랙션 ══ */
             const overlay = document.getElementById('overlay');
