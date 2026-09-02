@@ -1215,6 +1215,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', () => {
         if (isAnswerLocked) return;
         if (btn.disabled || btn.classList.contains('disabled')) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
         const selectedAnswer = btn.getAttribute('data-answer');
 
