@@ -959,11 +959,17 @@ document.addEventListener('DOMContentLoaded', () => {
   incorrectAudio2.load();
 
   function playCorrectSound() {
-    try { correctAudio.currentTime = 0; correctAudio.play().catch(() => {}); } catch (e) {}
+    try { 
+      const sfx = correctAudio.cloneNode();
+      sfx.play().catch(() => {}); 
+    } catch (e) {}
   }
 
   function playIncorrectSound() {
-    try { incorrectAudio2.currentTime = 0; incorrectAudio2.play().catch(() => {}); } catch (e) {}
+    try { 
+      const sfx = incorrectAudio2.cloneNode();
+      sfx.play().catch(() => {}); 
+    } catch (e) {}
   }
 
   function resizeGameContainer() {
