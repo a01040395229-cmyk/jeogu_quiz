@@ -785,10 +785,10 @@
       <div id="overlay"></div>
       <!-- 정답 팝업 -->
       <div id="popup-layer">
-        <img id="popup-img" src="" alt="정답 팝업" />
+        <img id="popup-img" alt="정답 팝업" />
       </div>
       <!-- 팝업 원형 아이콘 (X축 가운데, Y: 1632.2) -->
-      <img id="popup-circle-icon" src="" alt="원형 아이콘" />
+      <img id="popup-circle-icon" alt="원형 아이콘" />
   
       <!-- ══ 축하 컨패티 캔버스 (팝업 뒤 레이어 z-index: 250) ══ -->
       <canvas id="confetti-canvas" width="1080" height="1920"></canvas>
@@ -1075,9 +1075,55 @@
               'marquee-wrapper': { popup: 'asset/answer_scissors.svg', icon: 'asset/circle_icon_scissors.png' },
               'large-banner': { popup: 'asset/answer_gift.svg', icon: 'asset/circle_icon_gift.png' },
             };
+
+            const popupImageCache = new Map();
+            const popupPreparationPromises = new Map();
+
+            function preparePopupImage(src) {
+              if (popupImageCache.has(src)) {
+                return popupImageCache.get(src).preparation;
+              }
+
+              const image = new Image();
+              const preparation = new Promise(resolve => {
+                let finished = false;
+
+                const finish = async success => {
+                  if (finished) return;
+                  finished = true;
+
+                  if (success && typeof image.decode === 'function') {
+                    try {
+                      await image.decode();
+                    } catch (error) {}
+                  }
+
+                  resolve({ src, success });
+                };
+
+                image.addEventListener('load', () => finish(true), { once: true });
+                image.addEventListener('error', () => finish(false), { once: true });
+                image.src = src;
+
+                if (image.complete) {
+                  finish(image.naturalWidth > 0);
+                }
+              });
+
+              popupImageCache.set(src, { image, preparation });
+              return preparation;
+            }
+
+            Object.entries(quizMap).forEach(([id, assets]) => {
+              popupPreparationPromises.set(id, Promise.all([
+                preparePopupImage(assets.popup),
+                preparePopupImage(assets.icon),
+              ]));
+            });
         
             const foundItems = new Set();
             let activeId = null;
+            let isPopupOpening = false;
         
             function updateProgressBar(count) {
               if (count === 0) {
@@ -1160,64 +1206,70 @@
               }
             }
         
-            function showPopup(id) {
-              // 이전 활성 요소 해제
-              if (activeId) {
-                const prevEl = document.getElementById(activeId);
-                prevEl.classList.remove('quiz-active');
-                prevEl.classList.add('solved');
+            async function showPopup(id) {
+              if (isPopupOpening || !quizMap[id]) return;
+              isPopupOpening = true;
+
+              try {
+                await popupPreparationPromises.get(id);
+
+                // 이전 활성 요소 해제
+                if (activeId) {
+                  const prevEl = document.getElementById(activeId);
+                  prevEl.classList.remove('quiz-active');
+                  prevEl.classList.add('solved');
+                }
+
+                activeId = id;
+                const el = document.getElementById(id);
+                el.classList.add('quiz-active');
+
+                // ── 정답 진행바 업데이트 (신규 발견 시) ──
+                if (!foundItems.has(id)) {
+                  foundItems.add(id);
+                  updateProgressBar(foundItems.size);
+                  if (id === 'timer-wrapper') stopDiscountTimer();
+                }
+
+                // ── 팝업 및 마키 배너와 겹치지 않도록 스마트 양방향 자동 스크롤 ──
+                const VISIBLE_TOP = 589.47 + 15; // 마키 배너 하단 여유 (604.47px)
+                const POPUP_TOP = CANVAS_H - 615 - 30; // 팝업 상단 여유 (1275px)
+                const sceneRect = scene.getBoundingClientRect();
+                const scale = sceneRect.width / CANVAS_W;
+                const elRect = el.getBoundingClientRect();
+                const elTopInScene = (elRect.top - sceneRect.top) / scale;
+                const elBottomInScene = (elRect.bottom - sceneRect.top) / scale;
+
+                if (elTopInScene < VISIBLE_TOP) {
+                  // 요소 상단이 마키 배너 뒤로 가려짐 → 마키 배너 아래로 온전히 내려줌
+                  scrollZone.scrollTop -= (VISIBLE_TOP - elTopInScene);
+                } else if (elBottomInScene > POPUP_TOP) {
+                  // 요소 하단이 팝업 영역에 걸림 → 팝업 위로 요소를 올려줌
+                  scrollZone.scrollTop += (elBottomInScene - POPUP_TOP);
+                }
+
+                // 준비된 이미지를 먼저 연결한 뒤 오버레이와 두 모션을 한 번에 시작
+                popupImg.src = quizMap[id].popup;
+                popupCircleIcon.src = quizMap[id].icon;
+                scene.classList.add('has-overlay');
+                overlay.style.background = 'rgba(0, 0, 0, 0.5)';
+                overlay.style.display = 'block';
+                popupLayer.classList.remove('show');
+                popupCircleIcon.classList.remove('bboing');
+                void popupLayer.offsetWidth; // 두 애니메이션 재시작을 위한 단일 reflow
+                popupLayer.classList.add('show');
+                popupCircleIcon.classList.add('bboing');
+
+                // 정답 사운드 효과음 재생
+                playCorrect();
+
+                // 스크롤 잠금
+                scrollZone.style.overflowY = 'hidden';
+              } catch (error) {
+                console.error('팝업 이미지를 준비하지 못했습니다.', error);
+              } finally {
+                isPopupOpening = false;
               }
-        
-              activeId = id;
-              const el = document.getElementById(id);
-              el.classList.add('quiz-active');
-        
-              // ── 정답 진행바 업데이트 (신규 발견 시) ──
-              if (!foundItems.has(id)) {
-                foundItems.add(id);
-                updateProgressBar(foundItems.size);
-                if (id === 'timer-wrapper') stopDiscountTimer();
-              }
-        
-              // ── 팝업 및 마키 배너와 겹치지 않도록 스마트 양방향 자동 스크롤 ──
-              const VISIBLE_TOP = 589.47 + 15; // 마키 배너 하단 여유 (604.47px)
-              const POPUP_TOP = CANVAS_H - 615 - 30; // 팝업 상단 여유 (1275px)
-              const sceneRect = scene.getBoundingClientRect();
-              const scale = sceneRect.width / CANVAS_W;
-              const elRect = el.getBoundingClientRect();
-              const elTopInScene = (elRect.top - sceneRect.top) / scale;
-              const elBottomInScene = (elRect.bottom - sceneRect.top) / scale;
-        
-              if (elTopInScene < VISIBLE_TOP) {
-                // 요소 상단이 마키 배너 뒤로 가려짐 → 마키 배너 아래로 온전히 내려줌
-                scrollZone.scrollTop -= (VISIBLE_TOP - elTopInScene);
-              } else if (elBottomInScene > POPUP_TOP) {
-                // 요소 하단이 팝업 영역에 걸림 → 팝업 위로 요소를 올려줌
-                scrollZone.scrollTop += (elBottomInScene - POPUP_TOP);
-              }
-        
-              // 오버레이 및 캔버스 배경 보정 표시
-              scene.classList.add('has-overlay');
-              overlay.style.background = 'rgba(0, 0, 0, 0.5)';
-              overlay.style.display = 'block';
-        
-              // 팝업 슬라이드업 모션 트리거
-              popupImg.src = quizMap[id].popup;
-              popupLayer.classList.remove('show');
-              void popupLayer.offsetWidth; // reflow 강제
-              popupLayer.classList.add('show');
-        
-              // 원형 아이콘 뽀잉 모션 트리거
-              popupCircleIcon.src = quizMap[id].icon;
-              popupCircleIcon.classList.remove('bboing');
-              void popupCircleIcon.offsetWidth; // reflow 강제
-              popupCircleIcon.classList.add('bboing');
-        
-              // 정답 사운드 효과음 재생
-              playCorrect();
-        
-              // 스크롤 잠금
-              scrollZone.style.overflowY = 'hidden';
             }
         
             function closePopup() {
