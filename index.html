@@ -32,14 +32,29 @@
         bgmPlayer.volume = 0.15; // Set volume as requested
         const gameFrame = document.getElementById('game-frame');
 
+        let isBgmUnlocked = false;
+
+        function ensureBgmPlaying() {
+            if (isBgmUnlocked && bgmPlayer.paused) {
+                bgmPlayer.play().catch(e => console.log('BGM Autoplay/Resume blocked:', e));
+            }
+        }
+
+        // BGM이 예기치 않게 일시정지될 경우 (OS 포커스 해제, 재생 정책 등) 자동 다시 재생
+        bgmPlayer.addEventListener('pause', () => {
+            ensureBgmPlaying();
+        });
+
+        // 1초 간격으로 재생 상태 유지 점검
+        setInterval(ensureBgmPlaying, 1000);
+
         window.addEventListener('message', (event) => {
             const data = event.data;
             if (!data) return;
 
             if (data.type === 'interaction') {
-                if (bgmPlayer.paused) {
-                    bgmPlayer.play().catch(e => console.log('BGM Autoplay blocked:', e));
-                }
+                isBgmUnlocked = true;
+                ensureBgmPlaying();
             } else if (data.type === 'navigate') {
                 gameFrame.src = data.url;
             }

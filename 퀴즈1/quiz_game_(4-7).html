@@ -952,37 +952,79 @@ document.addEventListener('DOMContentLoaded', () => {
     imageCache[src] = img;
   });
 
-  const correctAudioPool = [];
-  const incorrectAudioPool = [];
-  for(let i=0; i<5; i++) {
-    const cAudio = new Audio('효과음/정답 효과음.mp3');
-    cAudio.load();
-    correctAudioPool.push(cAudio);
+  // ── Web Audio API 최적화 (맥북/스탠바이미 전용 하이브리드 호환) ──
+  const sfxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let correctBuffer = null;
+  let incorrectBuffer = null;
 
-    const iAudio = new Audio('효과음/오답 효과음 2.mp3');
-    iAudio.load();
-    incorrectAudioPool.push(iAudio);
+  const fallbackCorrectAudio = new Audio('효과음/정답 효과음.mp3');
+  const fallbackIncorrectAudio = new Audio('효과음/오답 효과음 2.mp3');
+
+  const unlockAudioContext = () => {
+    if (sfxAudioCtx.state === 'suspended') {
+      sfxAudioCtx.resume();
+    }
+  };
+  window.addEventListener('touchstart', unlockAudioContext, { passive: true });
+  window.addEventListener('pointerdown', unlockAudioContext, { passive: true });
+  window.addEventListener('click', unlockAudioContext, { passive: true });
+
+  function decodeAudio(arrayBuffer) {
+    return new Promise((resolve, reject) => {
+      try {
+        const res = sfxAudioCtx.decodeAudioData(
+          arrayBuffer,
+          buf => resolve(buf),
+          err => reject(err)
+        );
+        if (res && typeof res.then === 'function') {
+          res.then(resolve).catch(reject);
+        }
+      } catch (e) {
+        reject(e);
+      }
+    });
   }
 
-  let correctIdx = 0;
-  let incorrectIdx = 0;
+  function preloadSFX(url, callback) {
+    fetch(url)
+      .then(res => res.arrayBuffer())
+      .then(arrayBuffer => decodeAudio(arrayBuffer))
+      .then(buffer => callback(buffer))
+      .catch(err => console.log('SFX WebAudio Load fallback:', url, err));
+  }
+
+  preloadSFX('효과음/정답 효과음.mp3', buf => { correctBuffer = buf; });
+  preloadSFX('효과음/오답 효과음 2.mp3', buf => { incorrectBuffer = buf; });
+
+  function playBufferSound(buffer, fallbackAudio) {
+    if (sfxAudioCtx.state === 'suspended') {
+      sfxAudioCtx.resume();
+    }
+    if (buffer) {
+      try {
+        const source = sfxAudioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(sfxAudioCtx.destination);
+        source.start(0);
+        return;
+      } catch (e) {}
+    }
+    if (fallbackAudio) {
+      try {
+        const clone = fallbackAudio.cloneNode();
+        clone.currentTime = 0;
+        clone.play().catch(() => {});
+      } catch (e) {}
+    }
+  }
 
   function playCorrectSound() {
-    try { 
-      const sfx = correctAudioPool[correctIdx];
-      sfx.currentTime = 0;
-      sfx.play().catch(() => {}); 
-      correctIdx = (correctIdx + 1) % correctAudioPool.length;
-    } catch (e) {}
+    playBufferSound(correctBuffer, fallbackCorrectAudio);
   }
 
   function playIncorrectSound() {
-    try { 
-      const sfx = incorrectAudioPool[incorrectIdx];
-      sfx.currentTime = 0;
-      sfx.play().catch(() => {}); 
-      incorrectIdx = (incorrectIdx + 1) % incorrectAudioPool.length;
-    } catch (e) {}
+    playBufferSound(incorrectBuffer, fallbackIncorrectAudio);
   }
 
   function resizeGameContainer() {
@@ -1215,7 +1257,6 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', () => {
         if (isAnswerLocked) return;
         if (btn.disabled || btn.classList.contains('disabled')) return;
-        if (audioCtx.state === 'suspended') audioCtx.resume();
 
         const selectedAnswer = btn.getAttribute('data-answer');
 

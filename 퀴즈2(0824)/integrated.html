@@ -1101,20 +1101,61 @@
               }
             }
         
-            /* ── 사운드 효과 ── */
-            const sfxPool = [];
-            for(let i = 0; i < 5; i++) {
-              const audio = new Audio('sound/correct_sfx.mp3');
-              audio.preload = 'auto';
-              sfxPool.push(audio);
+            /* ── 사운드 효과 (맥북/스탠바이미 하이브리드 호환) ── */
+            const sfxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            let correctSfxBuffer = null;
+            const fallbackCorrectAudio = new Audio('sound/correct_sfx.mp3');
+
+            const unlockAudioCtx = () => {
+              if (sfxAudioCtx.state === 'suspended') {
+                sfxAudioCtx.resume();
+              }
+            };
+            window.addEventListener('touchstart', unlockAudioCtx, { passive: true });
+            window.addEventListener('pointerdown', unlockAudioCtx, { passive: true });
+            window.addEventListener('click', unlockAudioCtx, { passive: true });
+
+            function decodeAudio(arrayBuffer) {
+              return new Promise((resolve, reject) => {
+                try {
+                  const res = sfxAudioCtx.decodeAudioData(
+                    arrayBuffer,
+                    buf => resolve(buf),
+                    err => reject(err)
+                  );
+                  if (res && typeof res.then === 'function') {
+                    res.then(resolve).catch(reject);
+                  }
+                } catch (e) {
+                  reject(e);
+                }
+              });
             }
-            let sfxIndex = 0;
-        
+
+            fetch('sound/correct_sfx.mp3')
+              .then(res => res.arrayBuffer())
+              .then(data => decodeAudio(data))
+              .then(buf => { correctSfxBuffer = buf; })
+              .catch(() => {});
+
             function playCorrect() {
-              const audio = sfxPool[sfxIndex];
-              audio.currentTime = 0;
-              audio.play().catch(() => { });
-              sfxIndex = (sfxIndex + 1) % sfxPool.length;
+              if (sfxAudioCtx.state === 'suspended') {
+                sfxAudioCtx.resume();
+              }
+              if (correctSfxBuffer) {
+                try {
+                  const source = sfxAudioCtx.createBufferSource();
+                  source.buffer = correctSfxBuffer;
+                  source.connect(sfxAudioCtx.destination);
+                  source.start(0);
+                  return;
+                } catch (e) {}
+              }
+              try {
+                const clone = fallbackCorrectAudio.cloneNode();
+                clone.currentTime = 0;
+                clone.play().catch(() => {});
+              } catch (e) {}
             }
         
             function showPopup(id) {

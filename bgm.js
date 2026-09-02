@@ -1,14 +1,11 @@
 (function() {
+    // bgm.js - Sends interaction signal to parent wrapper to start continuous BGM,
+    // or plays BGM directly if opened as a standalone page.
+    
+    let interactionSent = false;
+
     // Check if we are running outside of the index.html wrapper
     const isStandalone = window === window.parent;
-    // Check if we are on the first screen (scene1.html)
-    const isFirstScreen = window.location.pathname.includes('scene1.html');
-
-    // 첫 화면이 아니면서 단독 실행도 아니면 아무것도 하지 않음 (다른 화면 터치 시 BGM 영향 없도록)
-    if (!isStandalone && !isFirstScreen) {
-        return;
-    }
-
     let standaloneAudio = null;
 
     if (isStandalone) {
@@ -21,8 +18,6 @@
         standaloneAudio.volume = 0.15;
         document.body.appendChild(standaloneAudio);
     }
-
-    let interactionSent = false;
 
     const signalInteraction = () => {
         if (isStandalone && standaloneAudio) {
@@ -45,9 +40,8 @@
             interactionSent = true;
         }
         
-        // 첫 화면에서만 클릭 시 재생하도록 했으므로, 한 번 실행 후 리스너 제거
-        document.removeEventListener('touchstart', signalInteraction, { passive: true });
-        document.removeEventListener('click', signalInteraction, { passive: true });
+        // webOS 등에서 예기치 않게 BGM이 일시정지될 경우를 대비해
+        // 이벤트 리스너를 제거하지 않고 유지하여 다음 터치 시 다시 재생되도록 함
     };
 
     document.addEventListener('touchstart', signalInteraction, { passive: true });
