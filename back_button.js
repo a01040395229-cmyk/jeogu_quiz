@@ -100,7 +100,7 @@
             e.stopPropagation();
             sessionStorage.clear();
             localStorage.clear();
-            window.parent.location.href = encodeURI('../jeogu_quizgame.html');
+            window.parent.postMessage({ type: 'navigate', url: encodeURI('./도로화면/scene1.html') }, '*');
         };
         btnMain.addEventListener('click', goMain);
         

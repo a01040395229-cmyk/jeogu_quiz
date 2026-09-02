@@ -1254,7 +1254,7 @@
                         setTimeout(() => {
                             sessionStorage.clear();
                             localStorage.clear();
-                            window.parent.location.reload();
+                            window.parent.postMessage({ type: 'navigate', url: encodeURI('./도로화면/scene1.html') }, '*');
                         }, 1500);
                     }
                 }

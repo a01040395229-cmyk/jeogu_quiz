@@ -952,23 +952,36 @@ document.addEventListener('DOMContentLoaded', () => {
     imageCache[src] = img;
   });
 
-  const correctAudio = new Audio('효과음/정답 효과음.mp3');
-  const incorrectAudio2 = new Audio('효과음/오답 효과음 2.mp3');
+  const correctAudioPool = [];
+  const incorrectAudioPool = [];
+  for(let i=0; i<5; i++) {
+    const cAudio = new Audio('효과음/정답 효과음.mp3');
+    cAudio.load();
+    correctAudioPool.push(cAudio);
 
-  correctAudio.load();
-  incorrectAudio2.load();
+    const iAudio = new Audio('효과음/오답 효과음 2.mp3');
+    iAudio.load();
+    incorrectAudioPool.push(iAudio);
+  }
+
+  let correctIdx = 0;
+  let incorrectIdx = 0;
 
   function playCorrectSound() {
     try { 
-      const sfx = correctAudio.cloneNode();
+      const sfx = correctAudioPool[correctIdx];
+      sfx.currentTime = 0;
       sfx.play().catch(() => {}); 
+      correctIdx = (correctIdx + 1) % correctAudioPool.length;
     } catch (e) {}
   }
 
   function playIncorrectSound() {
     try { 
-      const sfx = incorrectAudio2.cloneNode();
+      const sfx = incorrectAudioPool[incorrectIdx];
+      sfx.currentTime = 0;
       sfx.play().catch(() => {}); 
+      incorrectIdx = (incorrectIdx + 1) % incorrectAudioPool.length;
     } catch (e) {}
   }
 

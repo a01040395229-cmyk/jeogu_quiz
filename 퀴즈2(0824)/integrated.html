@@ -1102,12 +1102,19 @@
             }
         
             /* ── 사운드 효과 ── */
-            const correctSfx = new Audio('sound/correct_sfx.mp3');
-            correctSfx.preload = 'auto';
+            const sfxPool = [];
+            for(let i = 0; i < 5; i++) {
+              const audio = new Audio('sound/correct_sfx.mp3');
+              audio.preload = 'auto';
+              sfxPool.push(audio);
+            }
+            let sfxIndex = 0;
         
             function playCorrect() {
-              const sfx = correctSfx.cloneNode();
-              sfx.play().catch(() => { });
+              const audio = sfxPool[sfxIndex];
+              audio.currentTime = 0;
+              audio.play().catch(() => { });
+              sfxIndex = (sfxIndex + 1) % sfxPool.length;
             }
         
             function showPopup(id) {
