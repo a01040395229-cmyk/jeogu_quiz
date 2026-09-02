@@ -1262,70 +1262,117 @@
         const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
         const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
 
-        function getTypingSteps(text) {
-            let steps = [];
-            let currentText = "";
-            let i = 0;
-            
-            while (i < text.length) {
-                let char = text[i];
-                if (char === '<') {
-                    let tag = "";
-                    while (i < text.length && text[i] !== '>') {
-                        tag += text[i];
-                        i++;
-                    }
-                    if (i < text.length) {
-                        tag += text[i];
-                        i++;
-                    }
-                    currentText += tag;
-                    steps.push(currentText);
-                    continue;
-                }
-                
-                let code = char.charCodeAt(0);
-                if (code >= 0xAC00 && code <= 0xD7A3) {
-                    let cho = Math.floor((code - 0xAC00) / (21 * 28));
-                    let jung = Math.floor(((code - 0xAC00) % (21 * 28)) / 28);
-                    let jong = (code - 0xAC00) % 28;
-                    
-                    steps.push(currentText + CHO[cho]);
-                    steps.push(currentText + String.fromCharCode(0xAC00 + (cho * 21 * 28) + (jung * 28)));
-                    if (jong > 0) {
-                        steps.push(currentText + char);
-                    }
-                    currentText += char;
-                } else {
-                    currentText += char;
-                    steps.push(currentText);
-                }
-                i++;
-            }
+        function getCharacterTypingSteps(char) {
+            const code = char.charCodeAt(0);
+            if (code < 0xAC00 || code > 0xD7A3) return [char];
+
+            const cho = Math.floor((code - 0xAC00) / (21 * 28));
+            const jung = Math.floor(((code - 0xAC00) % (21 * 28)) / 28);
+            const jong = (code - 0xAC00) % 28;
+            const steps = [
+                CHO[cho],
+                String.fromCharCode(0xAC00 + (cho * 21 * 28) + (jung * 28))
+            ];
+            if (jong > 0) steps.push(char);
             return steps;
         }
 
-        // HTML 태그를 인식하는 타이핑 효과 함수
+        function buildTypingTokens(root) {
+            const tokens = [];
+
+            const collect = (node) => {
+                Array.from(node.childNodes).forEach((child) => {
+                    if (child.nodeType === Node.TEXT_NODE) {
+                        const text = child.nodeValue || "";
+                        child.nodeValue = "";
+                        if (text) tokens.push({ type: 'text', node: child, text });
+                        return;
+                    }
+
+                    if (child.nodeType !== Node.ELEMENT_NODE) return;
+                    if (child.tagName === 'BR') {
+                        child.style.display = 'none';
+                        tokens.push({ type: 'break', node: child });
+                        return;
+                    }
+
+                    tokens.push({ type: 'markup' });
+                    collect(child);
+                    tokens.push({ type: 'markup' });
+                });
+            };
+
+            collect(root);
+            return tokens;
+        }
+
+        // HTML 구조는 한 번만 만들고 현재 텍스트 노드만 갱신하는 타이핑 효과
         function playTypingEffect(element, htmlString, speed = 50) {
             clearTimeout(typingTimeout);
             element.innerHTML = "";
             currentFullHTML = htmlString;
             isTyping = true;
             typingStartTime = Date.now();
-            
-            const steps = getTypingSteps(htmlString);
-            let stepIndex = 0;
-            
+
+            const template = document.createElement('template');
+            template.innerHTML = htmlString;
+            const tokens = buildTypingTokens(template.content);
+            element.appendChild(template.content);
+
+            const cursor = document.createElement('span');
+            cursor.className = 'blinking-cursor';
+            cursor.textContent = '|';
+            element.appendChild(cursor);
+
+            let tokenIndex = 0;
+            let charIndex = 0;
+            let charStepIndex = 0;
+            let completedText = "";
+
             function type() {
-                if (stepIndex < steps.length) {
-                    element.innerHTML = steps[stepIndex] + '<span class="blinking-cursor">|</span>';
-                    stepIndex++;
-                    typingTimeout = setTimeout(type, speed);
-                } else {
-                    element.innerHTML = currentFullHTML + '<span class="blinking-cursor">|</span>';
+                if (tokenIndex >= tokens.length) {
                     isTyping = false;
+                    return;
                 }
+
+                const token = tokens[tokenIndex];
+                if (token.type === 'markup') {
+                    tokenIndex++;
+                    typingTimeout = setTimeout(type, speed);
+                    return;
+                }
+
+                if (token.type === 'break') {
+                    token.node.style.display = '';
+                    tokenIndex++;
+                    typingTimeout = setTimeout(type, speed);
+                    return;
+                }
+
+                if (charIndex >= token.text.length) {
+                    token.node.nodeValue = token.text;
+                    tokenIndex++;
+                    charIndex = 0;
+                    charStepIndex = 0;
+                    completedText = "";
+                    type();
+                    return;
+                }
+
+                const char = token.text[charIndex];
+                const steps = getCharacterTypingSteps(char);
+                token.node.nodeValue = completedText + steps[charStepIndex];
+                charStepIndex++;
+
+                if (charStepIndex >= steps.length) {
+                    completedText += char;
+                    charIndex++;
+                    charStepIndex = 0;
+                }
+
+                typingTimeout = setTimeout(type, speed);
             }
+
             type();
         }
 
