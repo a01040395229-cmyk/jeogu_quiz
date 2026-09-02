@@ -630,7 +630,6 @@ html, body {
   height: 866px;
   z-index: 121;
   pointer-events: none;
-  will-change: transform, opacity;
 }
 
 .congratulation-overlay-wrapper:not(.hidden) .congratulation-card,
@@ -915,7 +914,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const popupContent = document.getElementById('popupContent');
   const popupImg = document.getElementById('popupImg');
   const congratulationWrapper = document.getElementById('congratulationWrapper');
+  const congratulationCard = congratulationWrapper.querySelector('.congratulation-card');
   const btnNext = document.getElementById('btnNext');
+
+  congratulationCard.addEventListener('animationend', event => {
+    if (event.target === congratulationCard) congratulationCard.style.willChange = 'auto';
+  });
 
   const screenPreparationCache = new Map();
   const assetPreparationCache = new Map();
@@ -1404,6 +1408,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           popupWrapper.classList.add('hidden');
           setTimeout(() => {
+            congratulationCard.style.willChange = 'transform, opacity';
             congratulationWrapper.classList.remove('hidden');
             launchConfetti();
             playCorrectSound();

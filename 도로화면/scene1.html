@@ -102,7 +102,6 @@
             z-index: 10;
             transform-origin: bottom center; /* 바닥에 고정된 상태로 숨쉬듯 부풀게 */
             pointer-events: none; /* 투명한 영역은 클릭이 통과되도록 함 */
-            will-change: transform;
             backface-visibility: hidden;
         }
 
@@ -180,7 +179,6 @@
             perspective-origin: 50% 0%; /* 소실점을 맨 위쪽(저구 밑)으로 설정 */
             overflow: hidden;
             transition: opacity 0.3s ease;
-            will-change: opacity;
             contain: paint;
         }
 
@@ -197,7 +195,6 @@
             transform-origin: bottom center;
             transform: translateX(-50%) rotateX(60deg) translateZ(0);
             overflow: hidden;
-            will-change: transform;
             backface-visibility: hidden;
         }
 
@@ -964,6 +961,15 @@
         const typingTopUi = document.getElementById('typingTopUi');
         const maxCharsLabel = document.getElementById('maxCharsLabel');
 
+        jeoguEl.addEventListener('animationend', event => {
+            if (event.target === jeoguEl) jeoguEl.style.willChange = 'auto';
+        });
+        roadContainer.addEventListener('transitionend', event => {
+            if (event.target === roadContainer && event.propertyName === 'opacity') {
+                roadContainer.style.willChange = 'auto';
+            }
+        });
+
         const isMobileDevice = /Mobi|Android|WebOS|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 0;
 
         const showKeyboard = () => {
@@ -971,6 +977,12 @@
             backgroundEl.classList.remove('full-background');
             backgroundEl.classList.add('road-only');
 
+            if (!jeoguEl.classList.contains('typing-active')) {
+                jeoguEl.style.willChange = 'transform';
+            }
+            if (!roadContainer.classList.contains('hide')) {
+                roadContainer.style.willChange = 'opacity';
+            }
             mockKeyboard.classList.add('show');
             jeoguEl.classList.remove('typing-inactive');
             jeoguEl.classList.add('typing-active');
@@ -981,6 +993,12 @@
         };
 
         const hideKeyboard = () => {
+            if (!jeoguEl.classList.contains('typing-inactive')) {
+                jeoguEl.style.willChange = 'transform';
+            }
+            if (roadContainer.classList.contains('hide')) {
+                roadContainer.style.willChange = 'opacity';
+            }
             mockKeyboard.classList.remove('show');
             jeoguEl.classList.remove('typing-active');
             jeoguEl.classList.add('typing-inactive');

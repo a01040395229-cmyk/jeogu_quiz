@@ -54,7 +54,6 @@
     .mall-icon {
       position: absolute;
       opacity: 0;
-      will-change: transform, opacity;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
     }
@@ -70,7 +69,10 @@
       65%  { transform: translate3d(0, -60px, 0) rotate(calc(var(--rot) * 1.15)) scale(1.03, 0.97); } /* 1회 반동 */
       100% { opacity: 1; transform: translate3d(0, 0, 0) rotate(var(--rot)) scale(1); }
     }
-    .mall-icon.landing { animation: fallLand 0.75s cubic-bezier(0.15, 0.85, 0.35, 1) forwards; }
+    .mall-icon.landing {
+      animation: fallLand 0.75s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
+      will-change: transform, opacity;
+    }
 
     /* ── 타이핑 텍스트 페이드아웃 ── */
     #typing-wrap { transition: opacity 0.4s ease; }
@@ -87,7 +89,6 @@
       display: block;
       opacity: 0;
       pointer-events: none;
-      will-change: opacity;
       transform: translateY(-50%);
     }
     #carousel-wrap.visible { opacity: 1; }
@@ -95,7 +96,6 @@
       display: flex;
       width: max-content;
       transform: translate3d(0, 0, 0);
-      will-change: transform;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
     }
@@ -110,7 +110,10 @@
       0%   { transform: translate3d(0, 0, 0); }
       100% { transform: translate3d(calc(-5 * (540px + 90px)), 0, 0); }
     }
-    .carousel-track.running { animation: scrollLeft 10s linear infinite; }
+    .carousel-track.running {
+      animation: scrollLeft 10s linear infinite;
+      will-change: transform;
+    }
 
     /* ── 퀴즈 카드 (screen 2) ── */
     #quiz-card {
@@ -260,7 +263,6 @@
       width: 274px;
       height: 274px;
       z-index: 30;
-      will-change: transform;
     }
 
     /* discount_deal: 캔버스 X:758.67 Y:1868.87
@@ -577,8 +579,6 @@
       z-index: 310;
       display: none;
       pointer-events: none;
-      /* GPU 하드웨어 가속 레이어 생성 -> SVG 내부 drop shadow 필터 렌더링 딜레이 해결 */
-      will-change: transform, opacity;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
     }
@@ -886,10 +886,14 @@
           // 캐러셀 스크롤을 먼저 시작해 GPU 레이어를 준비한 뒤 표시
           const carouselWrap  = document.getElementById('carousel-wrap');
           const carouselTrack = document.getElementById('carousel-track');
+          carouselWrap.style.willChange = 'opacity';
           carouselTrack.classList.add('running');
           // 두 프레임 동안 합성 레이어를 준비한 후 완성된 캐러셀을 노출
           requestAnimationFrame(() => {
-            requestAnimationFrame(() => { carouselWrap.classList.add('visible'); });
+            requestAnimationFrame(() => {
+              carouselWrap.classList.add('visible');
+              requestAnimationFrame(() => { carouselWrap.style.willChange = 'auto'; });
+            });
           });
       
           // 400ms 후 퀴즈 카드 드롭인
@@ -922,14 +926,16 @@
         function dropIcon(id, delay) {
           setTimeout(() => {
             const el = document.getElementById(id);
-            el.addEventListener('animationend', () => {
+            const releaseIconLayer = () => {
               // 낙하가 끝난 정적 로고의 전용 GPU 합성 레이어를 해제
               el.style.willChange = 'auto';
               el.style.backfaceVisibility = 'visible';
               el.style.webkitBackfaceVisibility = 'visible';
-            }, { once: true });
+            };
+            el.addEventListener('animationend', releaseIconLayer, { once: true });
             requestAnimationFrame(() => requestAnimationFrame(() => {
               el.classList.add('landing');
+              setTimeout(releaseIconLayer, 900);
             }));
           }, delay);
         }
@@ -1076,6 +1082,13 @@
             const popupCircleIcon = document.getElementById('popup-circle-icon');
             const scrollZone = document.getElementById('scroll-zone');
             const progressBar = document.getElementById('progress-bar');
+
+            function releasePopupWillChange(event) {
+              if (event.target === event.currentTarget) event.currentTarget.style.willChange = 'auto';
+            }
+
+            popupLayer.addEventListener('animationend', releasePopupWillChange);
+            popupCircleIcon.addEventListener('animationend', releasePopupWillChange);
         
             // [요소 ID] → { popup: answer SVG, icon: circle_icon PNG }
             const quizMap = {
@@ -1316,6 +1329,8 @@
                 // 준비된 이미지를 먼저 연결한 뒤 오버레이와 두 모션을 한 번에 시작
                 popupImg.src = quizMap[id].popup;
                 popupCircleIcon.src = quizMap[id].icon;
+                popupLayer.style.willChange = 'transform';
+                popupCircleIcon.style.willChange = 'transform, opacity';
                 scene.classList.add('has-overlay');
                 overlay.style.background = 'rgba(0, 0, 0, 0.5)';
                 overlay.style.display = 'block';
@@ -1324,6 +1339,10 @@
                 void popupLayer.offsetWidth; // 두 애니메이션 재시작을 위한 단일 reflow
                 popupLayer.classList.add('show');
                 popupCircleIcon.classList.add('bboing');
+                setTimeout(() => {
+                  popupLayer.style.willChange = 'auto';
+                  popupCircleIcon.style.willChange = 'auto';
+                }, 700);
 
                 // 정답 사운드 효과음 재생
                 playCorrect();
@@ -1331,6 +1350,8 @@
                 // 스크롤 잠금
                 scrollZone.style.overflowY = 'hidden';
               } catch (error) {
+                popupLayer.style.willChange = 'auto';
+                popupCircleIcon.style.willChange = 'auto';
                 console.error('팝업 이미지를 준비하지 못했습니다.', error);
               } finally {
                 isPopupOpening = false;
@@ -1349,6 +1370,8 @@
               overlay.style.display = 'none';
               popupLayer.classList.remove('show');
               popupCircleIcon.classList.remove('bboing');
+              popupLayer.style.willChange = 'auto';
+              popupCircleIcon.style.willChange = 'auto';
         
               // 스크롤 잠금 해제
               scrollZone.style.overflowY = 'auto';
@@ -1543,8 +1566,15 @@
             const discountDealWrapper = document.getElementById('discount-deal-wrapper');
             const STICKY_THRESHOLD = 867.87; // 1868.87 - 1001.0
             let isScrollTicking = false;
+            let releaseDiscountDealLayerId = null;
         
             function updateDiscountDealPosition() {
+              discountDealWrapper.style.willChange = 'transform';
+              clearTimeout(releaseDiscountDealLayerId);
+              releaseDiscountDealLayerId = setTimeout(() => {
+                discountDealWrapper.style.willChange = 'auto';
+              }, 160);
+
               if (!isScrollTicking) {
                 isScrollTicking = true;
                 requestAnimationFrame(() => {

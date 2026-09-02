@@ -96,7 +96,6 @@
             z-index: 10;
             transform-origin: bottom center; /* 바닥에 고정된 상태로 숨쉬듯 부풀게 */
             pointer-events: none; /* 투명한 영역은 클릭이 통과되도록 함 */
-            will-change: transform;
             backface-visibility: hidden;
         }
 
@@ -185,7 +184,6 @@
             transform-origin: bottom center;
             transform: translateX(-50%) rotateX(60deg) translateZ(0);
             overflow: hidden;
-            will-change: transform;
             backface-visibility: hidden;
         }
 
@@ -1054,9 +1052,16 @@
         const typingTopUi = document.getElementById('typingTopUi');
         const maxCharsLabel = document.getElementById('maxCharsLabel');
 
+        jeoguEl.addEventListener('animationend', event => {
+            if (event.target === jeoguEl) jeoguEl.style.willChange = 'auto';
+        });
+
         const isMobileDevice = /Mobi|Android|WebOS|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 0;
 
         const showKeyboard = () => {
+            if (!jeoguEl.classList.contains('typing-active')) {
+                jeoguEl.style.willChange = 'transform';
+            }
             if (!isMobileDevice) {
                 mockKeyboard.classList.add('show');
             }
@@ -1068,6 +1073,9 @@
         };
 
         const hideKeyboard = () => {
+            if (!jeoguEl.classList.contains('typing-inactive')) {
+                jeoguEl.style.willChange = 'transform';
+            }
             if (!isMobileDevice) {
                 mockKeyboard.classList.remove('show');
             }
