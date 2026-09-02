@@ -177,8 +177,14 @@
             else if (path.includes('%ED%80%B4%EC%A6%882') || path.includes('퀴즈2')) {
                 const quizCard = document.getElementById('quiz-card');
                 const carouselWrap = document.getElementById('carousel-wrap');
-                if (quizCard && quizCard.style.display === 'block') isVisible = false;
-                if (carouselWrap && carouselWrap.classList.contains('visible')) isVisible = false;
+                const quizScene = document.getElementById('quiz-scene');
+                
+                if (quizScene && quizScene.style.display === 'block') {
+                    isVisible = true;
+                } else {
+                    if (quizCard && quizCard.style.display === 'block') isVisible = false;
+                    if (carouselWrap && carouselWrap.classList.contains('visible')) isVisible = false;
+                }
             }
 
             backBtn.style.display = isVisible ? 'block' : 'none';

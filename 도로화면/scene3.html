@@ -767,9 +767,7 @@
         const isMobileDevice = /Mobi|Android|WebOS|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 0;
 
         const showKeyboard = () => {
-            if (!isMobileDevice) {
-                mockKeyboard.classList.add('show');
-            }
+            mockKeyboard.classList.add('show');
             jeoguEl.classList.remove('typing-inactive');
             jeoguEl.classList.add('typing-active');
             btnName.classList.add('typing-active');
@@ -778,9 +776,7 @@
         };
 
         const hideKeyboard = () => {
-            if (!isMobileDevice) {
-                mockKeyboard.classList.remove('show');
-            }
+            mockKeyboard.classList.remove('show');
             jeoguEl.classList.remove('typing-active');
             jeoguEl.classList.add('typing-inactive');
             btnName.classList.remove('typing-active');
@@ -794,7 +790,7 @@
         
         // 화면의 다른 부분을 클릭하면 키보드 숨기기
         const handleOutsideClick = (e) => {
-            if (btnName.style.display === 'block' && (mockKeyboard.classList.contains('show') || isMobileDevice) && !mockKeyboard.contains(e.target) && e.target !== btnName) {
+            if (btnName.style.display === 'block' && mockKeyboard.classList.contains('show') && !mockKeyboard.contains(e.target) && e.target !== btnName) {
                 hideKeyboard();
                 // 포커스 해제
                 btnName.blur();
