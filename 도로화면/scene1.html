@@ -1253,7 +1253,7 @@
         // 화면 클릭(터치) 시 상태에 따라 화면 전환 및 문구 넘어가기
         const handleScreenClick = (e) => {
             const now = Date.now();
-            if (now - lastInteractionTime < 300) return; // 터치와 클릭 중복 이벤트 방지
+            if (now - lastInteractionTime < 400) return; // 터치와 클릭 중복 이벤트 방지
             lastInteractionTime = now;
 
             // 1. 시작 화면 (버튼이 표시된 상태)

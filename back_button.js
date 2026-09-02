@@ -179,9 +179,8 @@
                 const carouselWrap = document.getElementById('carousel-wrap');
                 const quizScene = document.getElementById('quiz-scene');
                 
-                if (quizScene && quizScene.style.display === 'block') {
-                    isVisible = true;
-                } else {
+                // intro-scene 쪽에 머물러 있을 때만 특정 요소 표시 시 백버튼 숨김
+                if (!quizScene || quizScene.style.display !== 'block') {
                     if (quizCard && quizCard.style.display === 'block') isVisible = false;
                     if (carouselWrap && carouselWrap.classList.contains('visible')) isVisible = false;
                 }
@@ -201,6 +200,20 @@
         // 상태 변화 감지 (style, class 변경)
         const observer = new MutationObserver(() => {
             updateVisibility();
+
+            const path = window.location.pathname;
+            if (path.includes('%ED%80%B4%EC%A6%882') || path.includes('퀴즈2')) {
+                const introScene = document.getElementById('intro-scene');
+                const quizScene = document.getElementById('quiz-scene');
+                
+                if (quizScene && quizScene.style.display === 'block' && backBtn.parentElement !== quizScene) {
+                    quizScene.appendChild(backBtn);
+                    quizScene.appendChild(popupOverlay);
+                } else if (introScene && introScene.style.display !== 'none' && backBtn.parentElement !== introScene) {
+                    introScene.appendChild(backBtn);
+                    introScene.appendChild(popupOverlay);
+                }
+            }
         });
 
         // 감지할 대상 요소들
