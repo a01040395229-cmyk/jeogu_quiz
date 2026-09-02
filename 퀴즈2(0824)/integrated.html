@@ -1151,8 +1151,11 @@
             /* ── 사운드 효과 (Base64 인메모리 디코딩, BGM 간섭 원천 차단) ── */
             const sfxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             let correctSfxBuffer = null;
+            let sfxReadyPromise = null;
+            const activeSfxSources = new Map();
 
             const unlockAudioCtx = () => {
+              ensureQuizSfxReady();
               if (sfxAudioCtx.state === 'suspended') {
                 sfxAudioCtx.resume();
               }
@@ -1188,23 +1191,75 @@
               });
             }
 
-            if (typeof CORRECT_SFX_B64 !== 'undefined') {
-              decodeAudio(base64ToArrayBuffer(CORRECT_SFX_B64)).then(buf => { correctSfxBuffer = buf; });
+            function ensureQuizSfxReady() {
+              if (sfxReadyPromise) return sfxReadyPromise;
+
+              const decodingTasks = [];
+              if (typeof CORRECT_SFX_B64 !== 'undefined') {
+                decodingTasks.push(
+                  decodeAudio(base64ToArrayBuffer(CORRECT_SFX_B64)).then(buffer => {
+                    correctSfxBuffer = buffer;
+                  })
+                );
+              }
+
+              sfxReadyPromise = Promise.all(decodingTasks).catch(error => {
+                console.error('퀴즈 효과음 디코딩 에러:', error);
+              });
+              return sfxReadyPromise;
             }
 
-            function playCorrect() {
+            function playBufferSound(buffer) {
               if (sfxAudioCtx.state === 'suspended') {
                 sfxAudioCtx.resume();
               }
-              if (correctSfxBuffer) {
+              if (buffer) {
                 try {
                   const source = sfxAudioCtx.createBufferSource();
-                  source.buffer = correctSfxBuffer;
+                  source.buffer = buffer;
                   source.connect(sfxAudioCtx.destination);
+                  const handleEnded = () => {
+                    try {
+                      source.disconnect();
+                    } catch (error) {}
+                    activeSfxSources.delete(source);
+                  };
+                  activeSfxSources.set(source, handleEnded);
+                  source.addEventListener('ended', handleEnded, { once: true });
                   source.start(0);
                 } catch (e) {}
               }
             }
+
+            function stopAllSfx() {
+              activeSfxSources.forEach((handleEnded, source) => {
+                source.removeEventListener('ended', handleEnded);
+                try {
+                  source.stop();
+                } catch (error) {}
+                try {
+                  source.disconnect();
+                } catch (error) {}
+              });
+              activeSfxSources.clear();
+            }
+
+            function playCorrect() {
+              if (correctSfxBuffer) {
+                playBufferSound(correctSfxBuffer);
+                return;
+              }
+              ensureQuizSfxReady().then(() => playBufferSound(correctSfxBuffer));
+            }
+
+            const runAudioWhenIdle = window.requestIdleCallback
+              ? callback => window.requestIdleCallback(callback, { timeout: 1000 })
+              : callback => window.setTimeout(callback, 100);
+
+            requestAnimationFrame(() => {
+              runAudioWhenIdle(() => ensureQuizSfxReady());
+            });
+            window.addEventListener('pagehide', stopAllSfx);
         
             async function showPopup(id) {
               if (isPopupOpening || !quizMap[id]) return;

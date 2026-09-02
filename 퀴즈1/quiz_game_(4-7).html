@@ -971,8 +971,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const sfxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   let correctBuffer = null;
   let incorrectBuffer = null;
+  let sfxReadyPromise = null;
+  const activeSfxSources = new Map();
 
   const unlockAudioContext = () => {
+    ensureQuizSfxReady();
     if (sfxAudioCtx.state === 'suspended') {
       sfxAudioCtx.resume();
     }
@@ -1008,11 +1011,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (typeof CORRECT_SFX_B64 !== 'undefined') {
-    decodeAudio(base64ToArrayBuffer(CORRECT_SFX_B64)).then(buf => { correctBuffer = buf; });
-  }
-  if (typeof INCORRECT_SFX_B64 !== 'undefined') {
-    decodeAudio(base64ToArrayBuffer(INCORRECT_SFX_B64)).then(buf => { incorrectBuffer = buf; });
+  function ensureQuizSfxReady() {
+    if (sfxReadyPromise) return sfxReadyPromise;
+
+    const decodingTasks = [];
+    if (typeof CORRECT_SFX_B64 !== 'undefined') {
+      decodingTasks.push(
+        decodeAudio(base64ToArrayBuffer(CORRECT_SFX_B64)).then(buffer => {
+          correctBuffer = buffer;
+        })
+      );
+    }
+    if (typeof INCORRECT_SFX_B64 !== 'undefined') {
+      decodingTasks.push(
+        decodeAudio(base64ToArrayBuffer(INCORRECT_SFX_B64)).then(buffer => {
+          incorrectBuffer = buffer;
+        })
+      );
+    }
+
+    sfxReadyPromise = Promise.all(decodingTasks).catch(error => {
+      console.error('퀴즈 효과음 디코딩 에러:', error);
+    });
+    return sfxReadyPromise;
   }
 
   function playBufferSound(buffer) {
@@ -1024,18 +1045,52 @@ document.addEventListener('DOMContentLoaded', () => {
         const source = sfxAudioCtx.createBufferSource();
         source.buffer = buffer;
         source.connect(sfxAudioCtx.destination);
+        const handleEnded = () => {
+          try {
+            source.disconnect();
+          } catch (error) {}
+          activeSfxSources.delete(source);
+        };
+        activeSfxSources.set(source, handleEnded);
+        source.addEventListener('ended', handleEnded, { once: true });
         source.start(0);
       } catch (e) {}
     }
   }
 
+  function stopAllSfx() {
+    activeSfxSources.forEach((handleEnded, source) => {
+      source.removeEventListener('ended', handleEnded);
+      try {
+        source.stop();
+      } catch (error) {}
+      try {
+        source.disconnect();
+      } catch (error) {}
+    });
+    activeSfxSources.clear();
+  }
+
   function playCorrectSound() {
-    playBufferSound(correctBuffer);
+    if (correctBuffer) {
+      playBufferSound(correctBuffer);
+      return;
+    }
+    ensureQuizSfxReady().then(() => playBufferSound(correctBuffer));
   }
 
   function playIncorrectSound() {
-    playBufferSound(incorrectBuffer);
+    if (incorrectBuffer) {
+      playBufferSound(incorrectBuffer);
+      return;
+    }
+    ensureQuizSfxReady().then(() => playBufferSound(incorrectBuffer));
   }
+
+  requestAnimationFrame(() => {
+    runWhenIdle(() => ensureQuizSfxReady());
+  });
+  window.addEventListener('pagehide', stopAllSfx);
 
   function resizeGameContainer() {
     const baseWidth = 1080;

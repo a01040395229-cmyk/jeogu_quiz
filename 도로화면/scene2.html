@@ -809,7 +809,7 @@
             stroke-width: 2;
         }
     </style>
-    <script src="https://unpkg.com/hangul-js" type="text/javascript"></script>
+    <script src="../vendor/hangul-0.2.6.min.js" type="text/javascript"></script>
     <script src="sounds/siren_b64.js"></script>
     <script src="../bgm.js"></script>
     <script src="../back_button.js"></script>
@@ -1380,6 +1380,8 @@
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let sirenBuffer = null;
         let sirenSource = null;
+        let sirenReadyPromise = null;
+        let sirenPlayRequestId = 0;
         
         // 사이렌 볼륨 조절을 위한 GainNode 생성
         const sirenGain = audioCtx.createGain();
@@ -1400,53 +1402,86 @@
         let trimStart = 0;
         let trimEnd = 0;
 
-        // siren_b64.js 에서 로드된 SIREN_B64 상수 사용
-        audioCtx.decodeAudioData(base64ToArrayBuffer(SIREN_B64))
-            .then(buffer => { 
+        // 첫 화면을 그린 뒤 한 번만 디코딩하고 같은 Promise를 재사용
+        function ensureSirenReady() {
+            if (sirenBuffer) return Promise.resolve(sirenBuffer);
+            if (sirenReadyPromise) return sirenReadyPromise;
+            if (typeof SIREN_B64 === 'undefined') return Promise.resolve(null);
+
+            sirenReadyPromise = audioCtx.decodeAudioData(base64ToArrayBuffer(SIREN_B64))
+              .then(buffer => {
                 sirenBuffer = buffer;
-                
+
                 // 오디오 파형을 분석하여 앞뒤 무음 구간을 자동으로 찾아냅니다 (MP3 고질적 공백 제거용)
                 const channelData = buffer.getChannelData(0);
                 const threshold = 0.02; // 무음 판정 기준치 (진폭)
-                
+
                 let startSample = 0;
                 let endSample = channelData.length - 1;
-                
+
                 for (let i = 0; i < channelData.length; i++) {
                     if (Math.abs(channelData[i]) > threshold) { startSample = i; break; }
                 }
                 for (let i = channelData.length - 1; i >= 0; i--) {
                     if (Math.abs(channelData[i]) > threshold) { endSample = i; break; }
                 }
-                
+
                 trimStart = startSample / buffer.sampleRate;
                 trimEnd = endSample / buffer.sampleRate;
-            })
-            .catch(e => console.error("사이렌 오디오 디코딩 에러:", e));
+                return buffer;
+              })
+              .catch(error => {
+                  console.error("사이렌 오디오 디코딩 에러:", error);
+                  return null;
+              });
 
-        function playSiren() {
-            if (!sirenBuffer || sirenSource) return;
+            return sirenReadyPromise;
+        }
+
+        const runAudioWhenIdle = window.requestIdleCallback
+            ? callback => window.requestIdleCallback(callback, { timeout: 1000 })
+            : callback => window.setTimeout(callback, 100);
+
+        requestAnimationFrame(() => {
+            runAudioWhenIdle(() => ensureSirenReady());
+        });
+        window.addEventListener('pointerdown', ensureSirenReady, { once: true, passive: true });
+        window.addEventListener('touchstart', ensureSirenReady, { once: true, passive: true });
+        window.addEventListener('keydown', ensureSirenReady, { once: true });
+
+        async function playSiren() {
+            if (sirenSource) return;
+            const playRequestId = ++sirenPlayRequestId;
+            const buffer = await ensureSirenReady();
+            if (!buffer || playRequestId !== sirenPlayRequestId || sirenSource) return;
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            
+
             sirenSource = audioCtx.createBufferSource();
-            sirenSource.buffer = sirenBuffer;
-            sirenSource.loop = true; 
-            
+            sirenSource.buffer = buffer;
+            sirenSource.loop = true;
+
             // 자동으로 분석된 실제 소리 구간만 정확히 반복하도록 설정
             sirenSource.loopStart = trimStart;
             sirenSource.loopEnd = trimEnd;
-            
+
             sirenSource.connect(sirenGain); // destination 대신 gainNode 연결
             sirenSource.start(0, trimStart); // 시작도 소리가 나는 부분부터 즉시 시작
         }
 
         function stopSiren() {
+            sirenPlayRequestId++;
             if (sirenSource) {
-                sirenSource.stop();
-                sirenSource.disconnect();
+                const source = sirenSource;
                 sirenSource = null;
+                try {
+                    source.stop();
+                } finally {
+                    source.disconnect();
+                }
             }
         }
+
+        window.addEventListener('pagehide', stopSiren);
 
 
 
