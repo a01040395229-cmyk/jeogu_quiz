@@ -56,7 +56,6 @@
       width: 1080px;
       height: 1920px;
       transform-origin: top left;
-      visibility: hidden;
     }
 
     #bg {
@@ -591,7 +590,6 @@
         wrapperHeight / DESIGN_HEIGHT
       );
       canvas.style.transform = `scale(${scale})`;
-      canvas.style.visibility = 'visible';
     }
 
     function scheduleScaleCanvas() {
@@ -605,7 +603,7 @@
     scaleCanvas();
     window.addEventListener('resize', scheduleScaleCanvas);
     window.addEventListener('orientationchange', scheduleScaleCanvas);
-    window.addEventListener('pageshow', scheduleScaleCanvas);
+    window.addEventListener('DOMContentLoaded', scheduleScaleCanvas);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) scheduleScaleCanvas();
     });

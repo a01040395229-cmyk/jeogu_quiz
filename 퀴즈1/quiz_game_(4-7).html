@@ -60,7 +60,6 @@ html, body {
   background-color: transparent;
   overflow: hidden;
   transform-origin: 0 0;
-  visibility: hidden;
 }
 
 .game-bg {
@@ -617,7 +616,6 @@ html, body {
 
 .congratulation-overlay-wrapper.hidden {
   opacity: 0;
-  visibility: hidden;
   pointer-events: none;
 }
 
@@ -1114,7 +1112,6 @@ document.addEventListener('DOMContentLoaded', () => {
     gameContainer.style.left = `${left}px`;
     gameContainer.style.top = `${top}px`;
     gameContainer.style.transform = `scale(${scale})`;
-    gameContainer.style.visibility = 'visible';
   }
 
   window.addEventListener('resize', resizeGameContainer);

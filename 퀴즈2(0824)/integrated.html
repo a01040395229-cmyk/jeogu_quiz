@@ -31,7 +31,6 @@
       transform-origin: center center;
       flex-shrink: 0;
       background: #fff;
-      visibility: hidden;
     }
     #bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
     #mall-gradient {
@@ -160,7 +159,6 @@
       transform-origin: center center;
       flex-shrink: 0;
       background: #fff;
-      visibility: hidden;
     }
 
     #quiz-scene.has-overlay {
@@ -949,13 +947,12 @@
           const vh = window.innerHeight;
           const scale = Math.min(vw / CANVAS_W, vh / CANVAS_H);
           scene.style.transform = `scale(${scale})`;
-          scene.style.visibility = 'visible';
         }
       
         window.addEventListener('resize', fitScene);
         fitScene(); // 즉시 적용
       
-        window.addEventListener('load', () => {
+        window.addEventListener('DOMContentLoaded', () => {
           fitScene();
           setTimeout(() => {
             typeNext();
@@ -978,7 +975,6 @@
             function fitScene() {
               const scale = Math.min(window.innerWidth / CANVAS_W, window.innerHeight / CANVAS_H);
               scene.style.transform = `scale(${scale})`;
-              scene.style.visibility = 'visible';
             }
             window.addEventListener('resize', fitScene);
             fitScene();

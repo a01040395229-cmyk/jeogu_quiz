@@ -1,6 +1,6 @@
 (function() {
-    // 0. 20초 무입력(유휴 상태) 감지 및 첫 화면 복귀 로직
-    const IDLE_TIMEOUT_MS = 20000; // 20초
+    // 0. 1분 무입력(유휴 상태) 감지 및 첫 화면 복귀 로직
+    const IDLE_TIMEOUT_MS = 60000; // 1분
     let lastActivityTime = Date.now();
     let isReturningToMain = false;
 
